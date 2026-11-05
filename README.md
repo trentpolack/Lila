@@ -37,7 +37,7 @@ Tests: `scripts\t.cmd build RelWithDebInfo -LE slow`. `-L slow` runs the slow su
 ## Get it running (macOS, experimental)
 
 Apple Silicon developer build: macOS 14+, a current Xcode/Command Line Tools installation, CMake 3.28+, Ninja,
-vcpkg, ARM64 Python 3.14 and a current MoltenVK with Vulkan 1.3 support. Qt 6.11 comes from vcpkg. This is a
+vcpkg, ARM64 Python 3.14 and MoltenVK 1.3 or newer with Vulkan 1.3 support. Qt 6.11 comes from vcpkg. This is a
 source-tree build; keep the checkout and dependency installations in place. The macOS port still needs hardware
 validation before it can be considered supported.
 
@@ -67,6 +67,14 @@ The preset uses dynamic ARM64 dependencies and initially disables USD, volumes, 
 installation can supply MoltenVK instead: set `LILA_MOLTENVK` to its `lib/libMoltenVK.dylib`. The renderer loads that
 configured library directly, so a global Vulkan loader/ICD setup is unnecessary. This direct path does not load
 Vulkan validation layers. Unsupported wide lines render at one pixel; unsupported ray queries use compute traversal.
+
+CMake keeps the selected MoltenVK path in its cache. If a build picked up an older SDK copy in `/usr/local/lib`,
+installing Homebrew's newer runtime alone will not switch it. Update the existing build, rebuild, then restart Lila:
+
+```sh
+cmake -S . -B build/macos-arm64 -DLILA_MOLTENVK="$(brew --prefix molten-vk)/lib/libMoltenVK.dylib"
+./build.sh
+```
 
 First-milestone checks:
 
