@@ -41,25 +41,25 @@ vcpkg, ARM64 Python 3.14 and a current MoltenVK with Vulkan 1.3 support. Qt 6.11
 source-tree build; keep the checkout and dependency installations in place. The macOS port still needs hardware
 validation before it can be considered supported.
 
-For Homebrew dependencies and a vcpkg checkout (use your existing `VCPKG_ROOT` if you have one):
+Install the Homebrew dependencies, then build:
 
 ```sh
-brew install cmake ninja python@3.14 molten-vk
-export VCPKG_ROOT="$HOME/dev/vcpkg"
-git clone https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
-"$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+brew install cmake python@3.14 molten-vk
 
 # From the Lila checkout; configure/build every target, including extensions.
-cmake --preset macos-arm64 \
-  -DPython_EXECUTABLE="$(brew --prefix python@3.14)/bin/python3.14" \
-  -DLILA_MOLTENVK="$(brew --prefix molten-vk)/lib/libMoltenVK.dylib"
 ./build.sh                             # dev build (RelWithDebInfo)
 # ./build.sh --release                 # release build; executable in bin/Release instead
 build/macos-arm64/bin/RelWithDebInfo/lila
 ```
 
-`build.sh` configures with the `macos-arm64` preset on first run if needed, then builds every target. The explicit
-configure command above selects the Homebrew Python and MoltenVK paths; subsequent builds reuse that configuration.
+`build.sh` uses `VCPKG_ROOT` when set, or reuses the configured checkout, `.deps/vcpkg`, `$HOME/dev/vcpkg` or
+`$HOME/vcpkg`. Otherwise it clones and bootstraps vcpkg into the ignored `.deps/vcpkg` directory. It also fetches
+Ninja through vcpkg if Ninja is missing from `PATH`. The first run needs network access and builds the dependencies.
+The script requires Python 3.14 and, when needed, adds Homebrew's `python@3.14/libexec/bin` to its own `PATH` so
+vcpkg/Meson uses it instead of macOS's system Python. The same interpreter is passed to Lila's CMake configuration.
+It then configures with the `macos-arm64` preset and builds every target; subsequent builds reuse that configuration.
+For custom dependency paths, configure manually with `-DPython_EXECUTABLE=...` and `-DLILA_MOLTENVK=...`, setting
+`VCPKG_ROOT` to your checkout (or `$PWD/.deps/vcpkg`) first.
 
 The preset uses dynamic ARM64 dependencies and initially disables USD, volumes, PySide and Tracy. A Vulkan SDK
 installation can supply MoltenVK instead: set `LILA_MOLTENVK` to its `lib/libMoltenVK.dylib`. The renderer loads that
