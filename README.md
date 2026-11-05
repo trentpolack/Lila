@@ -44,7 +44,7 @@ validation before it can be considered supported.
 Install the Homebrew dependencies, then build:
 
 ```sh
-brew install cmake python@3.14 molten-vk
+brew install cmake python@3.14 molten-vk autoconf autoconf-archive automake libtool
 
 # From the Lila checkout; configure/build every target, including extensions.
 ./build.sh                             # dev build (RelWithDebInfo)
@@ -55,6 +55,8 @@ build/macos-arm64/bin/RelWithDebInfo/lila
 `build.sh` uses `VCPKG_ROOT` when set, or reuses the configured checkout, `.deps/vcpkg`, `$HOME/dev/vcpkg` or
 `$HOME/vcpkg`. Otherwise it clones and bootstraps vcpkg into the ignored `.deps/vcpkg` directory. It also fetches
 Ninja through vcpkg if Ninja is missing from `PATH`. The first run needs network access and builds the dependencies.
+Autotools and the `autoconf-archive` macros are needed by dependencies such as Qt's `libb2`; the script checks for
+the Autotools commands before starting dependency builds.
 The script requires Python 3.14 and, when needed, adds Homebrew's `python@3.14/libexec/bin` to its own `PATH` so
 vcpkg/Meson uses it instead of macOS's system Python. The same interpreter is passed to Lila's CMake configuration.
 It then configures with the `macos-arm64` preset and builds every target; subsequent builds reuse that configuration.

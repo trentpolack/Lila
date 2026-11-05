@@ -28,6 +28,17 @@ if ! command -v cmake >/dev/null 2>&1; then
     exit 1
 fi
 
+# Qt's libb2 dependency regenerates its configure script with system Autotools.
+if ! command -v autoconf >/dev/null 2>&1 || \
+   ! command -v autoreconf >/dev/null 2>&1 || \
+   ! command -v automake >/dev/null 2>&1 || \
+   ! command -v aclocal >/dev/null 2>&1 || \
+   ! { command -v libtoolize >/dev/null 2>&1 || command -v glibtoolize >/dev/null 2>&1; }; then
+    echo "[failed] Autotools prerequisites are missing. Install them with:" >&2
+    echo "  brew install autoconf autoconf-archive automake libtool" >&2
+    exit 1
+fi
+
 # vcpkg's Meson port searches for python3, not the versioned python3.14 command.
 if ! python3 -I -c 'import sys; sys.exit(sys.version_info[:2] != (3, 14))' >/dev/null 2>&1; then
     if command -v brew >/dev/null 2>&1; then
