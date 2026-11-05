@@ -1,5 +1,7 @@
 #include "gn/NodesCommon.h"
 
+#include "core/Decimal.h"
+
 #include "geo/ObjIO.h"
 #include "geo/PlyIO.h"
 #include "geo/StlIO.h"
@@ -188,7 +190,7 @@ bool parseNumber(const std::string& s, double& out)
     if (s.empty())
         return false;
     const char* end = s.data() + s.size();
-    auto [p, ec] = std::from_chars(s.data(), end, out);
+    auto [p, ec] = lila::fromChars(s.data(), end, out);
     return ec == std::errc() && p == end;
 }
 

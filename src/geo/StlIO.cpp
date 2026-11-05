@@ -1,5 +1,7 @@
 #include "geo/StlIO.h"
 
+#include "core/Decimal.h"
+
 #include "geo/ColorSets.h"
 #include "geo/IoCommon.h"
 #include "geo/Normals.h"
@@ -234,7 +236,7 @@ struct Tokens
         std::string_view t = next();
         if (!t.empty() && t[0] == '+')
             t.remove_prefix(1);
-        auto [ptr, ec] = std::from_chars(t.data(), t.data() + t.size(), out);
+        auto [ptr, ec] = lila::fromChars(t.data(), t.data() + t.size(), out);
         return ec == std::errc() && ptr == t.data() + t.size();
     }
 };

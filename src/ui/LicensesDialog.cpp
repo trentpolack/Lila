@@ -54,6 +54,7 @@ QString fileId(const QString& name)
         {"Draco", "draco"}, {"Imath", "imath"}, {"Manifold", "manifold"}, {"Clipper2", "clipper2"}, {"Slang", "shader-slang"},
         {"Vulkan-Headers", "vulkan-headers"}, {"Vulkan Memory Allocator", "vulkan-memory-allocator"}, {"volk", "volk"},
         {"meshoptimizer", "meshoptimizer"}, {"Jolt", "joltphysics"}, {"GLM", "glm"}, {"nlohmann", "nlohmann-json"},
+        {"fast_float", "fast-float"},
         {"cpp-httplib", "cpp-httplib"}, {"Brotli", "brotli"}, {"cgltf", "cgltf"}, {"libwebp", "libwebp"}, {"Zstandard", "zstd"},
         {"Tracy", "tracy"}, {"Capstone", "capstone"}, {"doctest", "doctest"}, {"Dem Bones", "dem-bones"}, {"FFmpeg", "ffmpeg"},
         {"miniaudio", "miniaudio"}, {"Archivo", "archivo"}, {"Inter", "inter"}, {"JetBrains Mono", "jetbrains-mono"},

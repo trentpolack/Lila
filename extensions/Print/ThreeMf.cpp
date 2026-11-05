@@ -1,5 +1,7 @@
 #include "ThreeMf.h"
 
+#include <lila/Decimal.h>
+
 #include <lila/MeshOps.h>
 
 #include <miniz.h>
@@ -220,7 +222,7 @@ template <class T> T number(const Tag& t, std::string_view key, T fallback = T{}
     while (!s.empty() && s.front() == ' ')
         s.remove_prefix(1);
     T v{};
-    const auto r = std::from_chars(s.data(), s.data() + s.size(), v);
+    const auto r = lila::fromChars(s.data(), s.data() + s.size(), v);
     return r.ec == std::errc() ? v : fallback;
 }
 
@@ -250,7 +252,7 @@ glm::dmat4 parseTransform(std::string_view s)
     {
         while (p < end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r'))
             ++p;
-        const auto r = std::from_chars(p, end, v[n]);
+        const auto r = lila::fromChars(p, end, v[n]);
         if (r.ec != std::errc())
             break;
         p = r.ptr;

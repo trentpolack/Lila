@@ -23,6 +23,7 @@
 #include <cctype>
 #include <chrono>
 #include <cmath>
+#include <format>
 #include <fstream>
 #include <random>
 #include <set>
@@ -58,7 +59,7 @@ std::string stamp(const fs::path& p)
 {
     std::error_code ec;
     const auto t = fs::last_write_time(p, ec);
-    return ec ? std::string() : std::to_string(t.time_since_epoch().count());
+    return ec ? std::string() : std::format("{}", t.time_since_epoch().count());
 }
 
 Asset need(const std::string& id, const char* cmd)

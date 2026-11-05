@@ -711,7 +711,7 @@ json parseScalar(const std::string& t)
             return iv;
     }
     double d = 0.0;
-    auto r = std::from_chars(t.data(), t.data() + t.size(), d);
+    auto r = lila::fromChars(t.data(), t.data() + t.size(), d);
     if (r.ec != std::errc() || r.ptr != t.data() + t.size())
         throw std::runtime_error("can't read value '" + t + "'");
     return d;
@@ -819,7 +819,7 @@ private:
             return true;
         }
         integral = false;
-        if (std::from_chars(t.data(), t.data() + t.size(), d).ec != std::errc())
+        if (lila::fromChars(t.data(), t.data() + t.size(), d).ec != std::errc())
             return false;
         i = end;
         return true;

@@ -9,7 +9,9 @@
 #include "scene/Graph.h"
 #include "scene/ImagePlane.h"
 
+#include <atomic>
 #include <cmath>
+#include <thread>
 #include <vector>
 
 using json = nlohmann::json;
@@ -166,6 +168,46 @@ TEST_CASE("audio engine: plays from the time given, scrub stops by itself, one-s
     e.render(out.data(), 256);
     CHECK(out[0] == doctest::Approx(0.25f));
     CHECK(out[20] == 0.0f);
+    e.setVoices({});
+}
+
+TEST_CASE("audio engine: publishes complete snapshots while rendering")
+{
+    media::AudioEngine& e = media::AudioEngine::get();
+    auto quiet = std::make_shared<media::AudioBuffer>();
+    quiet->rate = media::kSampleRate;
+    quiet->samples.assign(size_t(media::kSampleRate) * 2, 0.25f);
+    auto loud = std::make_shared<media::AudioBuffer>(*quiet);
+    loud->samples.assign(quiet->samples.size(), 0.5f);
+    e.setVoices({{quiet, 0.0, 1.0, "x"}});
+    e.play(0.0);
+
+    std::atomic<bool> start{false};
+    std::thread publisher([&] {
+        while (!start.load())
+            std::this_thread::yield();
+        for (int i = 0; i < 2000; ++i)
+        {
+            e.setVoices({{i % 2 ? quiet : loud, 0.0, 1.0, "x"}});
+            if (i % 3)
+                e.play(0.0);
+            else
+                e.stop();
+        }
+    });
+    start.store(true);
+    std::vector<float> out(32);
+    bool completeSnapshots = true;
+    for (int i = 0; i < 2000; ++i)
+    {
+        e.render(out.data(), 16);
+        completeSnapshots &= out[0] == 0.0f || out[0] == 0.25f || out[0] == 0.5f;
+        for (float sample : out)
+            completeSnapshots &= sample == out[0];
+    }
+    publisher.join();
+    CHECK(completeSnapshots);
+    e.stop();
     e.setVoices({});
 }
 

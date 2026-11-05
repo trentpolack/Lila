@@ -1,5 +1,7 @@
 #include "curve/Dxf.h"
 
+#include "core/Decimal.h"
+
 #include "core/UninitVector.h"
 
 #include "curve/CurveMath.h"
@@ -152,7 +154,7 @@ bool readAscii(std::string_view data, Groups& out, std::string& error)
                         std::string_view v = trim(value);
                         if (!v.empty() && v.front() == '+')
                             v.remove_prefix(1);
-                        std::from_chars(v.data(), v.data() + v.size(), g.num);
+                        lila::fromChars(v.data(), v.data() + v.size(), g.num);
                     }
                     if (g.code == 0 && g.s == "EOF")
                         found.eof = std::min(found.eof, p);

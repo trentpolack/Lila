@@ -1,5 +1,7 @@
 #include "maya/MayaFile.h"
 
+#include "core/Decimal.h"
+
 #include "core/Profile.h"
 #include "core/Progress.h"
 
@@ -45,7 +47,7 @@ bool toNumber(std::string_view s, double* out)
         return *out = 0.0, true;
     if (!s.empty() && s[0] == '+')
         s.remove_prefix(1);
-    auto [p, ec] = std::from_chars(s.data(), s.data() + s.size(), *out);
+    auto [p, ec] = lila::fromChars(s.data(), s.data() + s.size(), *out);
     if (ec == std::errc::result_out_of_range)
         return *out = (s[0] == '-' ? -1e308 : 1e308), true;
     return ec == std::errc() && p == s.data() + s.size();

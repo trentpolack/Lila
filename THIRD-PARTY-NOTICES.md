@@ -36,6 +36,7 @@ FFmpeg 9.0.2 is dynamically linked (avcodec, avformat, avutil, swscale and swres
 | Jolt Physics | MIT | Jorrit Rouwe | https://github.com/jrouwe/JoltPhysics |
 | miniaudio | MIT-0 OR Unlicense | David Reid | https://github.com/mackron/miniaudio |
 | GLM | MIT | G-Truc Creation | https://github.com/g-truc/glm |
+| fast_float (macOS) | MIT | The fast_float authors | https://github.com/fastfloat/fast_float |
 | nlohmann/json | MIT | Niels Lohmann | https://github.com/nlohmann/json |
 | cpp-httplib | MIT | yhirose | https://github.com/yhirose/cpp-httplib |
 | Brotli | MIT | The Brotli Authors | https://github.com/google/brotli |

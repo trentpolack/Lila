@@ -37,11 +37,6 @@ if(WIN32)
         COMMENT "Deploying the Python runtime")
     lila_deploy_qt(lila)
     lila_bundle_pyside(lila)
-    # Help > Licenses reads the notices and license texts beside the exe; installers ship them from there.
-    add_custom_command(TARGET lila POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${CMAKE_SOURCE_DIR} -DSHARE_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share
-            -DOUT_DIR=$<TARGET_FILE_DIR:lila> -P ${CMAKE_SOURCE_DIR}/cmake/LilaLicenses.cmake
-        COMMENT "Deploying third-party notices and license texts")
     # Help > Record Performance Trace runs it against Lila over 127.0.0.1.
     if(LILA_TRACY AND VCPKG_INSTALLED_DIR)
         set(_tracy_tools ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/tools/tracy)
@@ -51,3 +46,9 @@ if(WIN32)
             COMMENT "Deploying tracy-capture")
     endif()
 endif()
+
+# Help > Licenses reads the notices and license texts beside the executable on every platform.
+add_custom_command(TARGET lila POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${CMAKE_SOURCE_DIR} -DSHARE_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share
+        -DOUT_DIR=$<TARGET_FILE_DIR:lila> -P ${CMAKE_SOURCE_DIR}/cmake/LilaLicenses.cmake
+    COMMENT "Deploying third-party notices and license texts")

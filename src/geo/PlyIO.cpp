@@ -1,5 +1,7 @@
 #include "geo/PlyIO.h"
 
+#include "core/Decimal.h"
+
 #include "geo/ColorSets.h"
 #include "geo/IoCommon.h"
 #include "geo/Normals.h"
@@ -194,7 +196,7 @@ private:
         if (first < mEnd && *first == '+')
             ++first;
         double v = 0.0;
-        auto [ptr, ec] = std::from_chars(first, mEnd, v);
+        auto [ptr, ec] = lila::fromChars(first, mEnd, v);
         if (ec != std::errc() || ptr == first)
         {
             mOk = false;

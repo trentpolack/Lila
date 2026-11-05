@@ -262,7 +262,7 @@ int64_t unixTime(const fs::path& file)
     auto t = fs::last_write_time(file, ec);
     if (ec)
         return 0;
-    return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::clock_cast<std::chrono::system_clock>(t).time_since_epoch()).count();
+    return paths::unixSeconds(t);
 }
 
 std::vector<Version> list(const fs::path& scene)

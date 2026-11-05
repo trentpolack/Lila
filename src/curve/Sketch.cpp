@@ -1,5 +1,7 @@
 #include "curve/Sketch.h"
 
+#include "core/Decimal.h"
+
 #include "core/Profile.h"
 #include "curve/Tessellate.h"
 
@@ -1580,7 +1582,7 @@ private:
             }
             double v = 0.0;
             std::string num(mText.substr(b, mPos - b));
-            auto [p, ec] = std::from_chars(num.data(), num.data() + num.size(), v);
+            auto [p, ec] = lila::fromChars(num.data(), num.data() + num.size(), v);
             if (ec != std::errc() || p != num.data() + num.size())
                 throw std::invalid_argument("bad number '" + num + "'");
             return v;

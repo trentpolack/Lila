@@ -17,6 +17,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <filesystem>
+#include <format>
 #include <list>
 #include <mutex>
 
@@ -101,7 +102,7 @@ std::shared_ptr<const gn::Volume> readVolume(const std::filesystem::path& file, 
     auto stamp = std::filesystem::last_write_time(file, ec);
     if (ec)
         throw std::runtime_error("can't find " + paths::toUtf8(file));
-    std::string key = paths::toUtf8(file) + "|" + gridName + "|" + std::to_string(stamp.time_since_epoch().count());
+    std::string key = std::format("{}|{}|{}", paths::toUtf8(file), gridName, stamp.time_since_epoch().count());
     {
         std::lock_guard lock(mutex);
         for (auto& [k, v] : recent)

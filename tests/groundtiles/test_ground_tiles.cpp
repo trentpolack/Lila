@@ -731,7 +731,7 @@ TEST_CASE("ground tiles: bake plane")
     json v = loose(preset("Mushed Grass"));
     v.update({{"tileSize", 6.0}, {"count", 6}});
     const json r = generateTile(v, {source(blade())});
-    graph().setValue({graph().find(r["group"])->id(), Transform::kTranslate, -1}, glm::dvec3(500.0, 0.0, 25.0));
+    graph().setValue({graph().find(r["group"].get<std::string>())->id(), Transform::kTranslate, -1}, glm::dvec3(500.0, 0.0, 25.0));
     const Box b = worldBox(run("groundTileCreateBakePlane", {{"args", {r["group"]}}}).get<std::string>());
     const glm::dvec3 centre = (b.lo + b.hi) * 0.5;
     CHECK(centre.x == Approx(500.0));

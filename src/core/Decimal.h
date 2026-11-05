@@ -3,9 +3,32 @@
 #include <cctype>
 #include <charconv>
 #include <cstdint>
+#include <type_traits>
+
+#if defined(__APPLE__)
+#include <fast_float/fast_float.h>
+#endif
 
 namespace lila
 {
+/** Locale-independent from_chars semantics, including float/double on macOS before 26. */
+template <class T> inline std::from_chars_result fromChars(const char* first, const char* last, T& out)
+{
+#if defined(__APPLE__)
+    if constexpr (std::is_floating_point_v<T>)
+    {
+        // fast_float may write infinity or zero on a range error; std::from_chars leaves out unchanged.
+        T value{};
+        const auto result = fast_float::from_chars(first, last, value);
+        if (result.ec == std::errc())
+            out = value;
+        return {result.ptr, result.ec};
+    }
+    else
+#endif
+        return std::from_chars(first, last, out);
+}
+
 /**
  * A plain decimal (optional minus, digits, optional fraction and exponent) of at most 15 significant digits with a power
  * of ten within 22 of them, converted exactly: both are exact doubles, so one multiply or divide rounds correctly, as
@@ -80,6 +103,6 @@ inline std::from_chars_result parseDouble(const char* first, const char* last, d
 {
     if (const char* p = fastDecimal(first, last, out))
         return {p, std::errc()};
-    return std::from_chars(first, last, out);
+    return fromChars(first, last, out);
 }
 } // namespace lila

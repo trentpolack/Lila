@@ -296,7 +296,7 @@ namespace
 /** Intensity of the current HDRI as a slider (0..4) and a field (0..10), remembered per HDRI; Reset follows the global pref. */
 QWidgetAction* environmentIntensityRow(QMenu* menu)
 {
-    constexpr double kSliderMax = 4.0;
+    static constexpr double kSliderMax = 4.0;
     constexpr int kSliderSteps = 400;
     auto* holder = new QWidget(menu);
     auto* row = new QHBoxLayout(holder);

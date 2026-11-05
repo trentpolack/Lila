@@ -1,5 +1,7 @@
 #include "scene/LodGroup.h"
 
+#include "core/Decimal.h"
+
 #include "ops/Command.h"
 #include "ops/Undo.h"
 #include "core/Log.h"
@@ -178,7 +180,7 @@ std::vector<double> parseSizes(std::string_view text)
         while (end < text.size() && text[end] != ' ' && text[end] != ',' && text[end] != '\t' && text[end] != ']')
             ++end;
         double v = 0.0;
-        if (end > i && std::from_chars(text.data() + i, text.data() + end, v).ec == std::errc())
+        if (end > i && lila::fromChars(text.data() + i, text.data() + end, v).ec == std::errc())
             out.push_back(v);
         i = end;
     }

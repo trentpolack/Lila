@@ -1,5 +1,7 @@
 #include "TestUtil.h"
 
+#include "core/Decimal.h"
+
 #include "geo/Normals.h"
 #include "geo/ObjIO.h"
 #include "geo/Primitives.h"
@@ -146,7 +148,7 @@ TEST_CASE("obj: coordinates read exactly as from_chars reads them, whatever thei
             const std::string& s = numbers[size_t(p) * 3 + size_t(c)];
             const char* b = s.data() + (s[0] == '+' ? 1 : 0);
             double want = 0.0;
-            std::from_chars(b, s.data() + s.size(), want);
+            lila::fromChars(b, s.data() + s.size(), want);
             INFO(s);
             CHECK(std::memcmp(&want, &m.position(p)[c], sizeof(double)) == 0);
         }

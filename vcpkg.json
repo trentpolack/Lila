@@ -34,6 +34,10 @@
     "tbb",
     "alembic",
     "glm",
+    {
+      "name": "fast-float",
+      "platform": "osx"
+    },
     "nlohmann-json",
     "volk",
     "vulkan-headers",

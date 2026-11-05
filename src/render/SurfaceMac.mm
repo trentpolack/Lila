@@ -3,6 +3,7 @@
 
 #import <AppKit/AppKit.h>
 #import <QuartzCore/CAMetalLayer.h>
+#import <QuartzCore/CATransaction.h>
 #include <vulkan/vulkan_metal.h>
 
 #include <algorithm>

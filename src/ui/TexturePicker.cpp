@@ -33,6 +33,7 @@
 #include <QToolButton>
 #include <QVBoxLayout>
 
+#include <format>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -97,7 +98,7 @@ struct Thumbs
     {
         std::error_code ec;
         auto t = fs::last_write_time(file, ec);
-        return paths::toUtf8(file) + "|" + std::to_string(ec ? 0 : t.time_since_epoch().count());
+        return std::format("{}|{}", paths::toUtf8(file), ec ? 0 : t.time_since_epoch().count());
     }
 
     /** The cached pixmap, or null after queueing a read; then arrived() reports the key. */

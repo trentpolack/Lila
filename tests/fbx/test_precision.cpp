@@ -1,5 +1,7 @@
 #include <doctest/doctest.h>
 
+#include "core/Decimal.h"
+
 #include "ops/Command.h"
 #include "geo/Mesh.h"
 #include "io/SceneFile.h"
@@ -96,7 +98,7 @@ std::vector<glm::dvec3> objVertices(const fs::path& path)
         {
             while (p < end && *p == ' ')
                 ++p;
-            p = std::from_chars(p, end, v[k]).ptr;
+            p = lila::fromChars(p, end, v[k]).ptr;
         }
         out.push_back(v);
     }

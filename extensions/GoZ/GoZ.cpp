@@ -47,6 +47,7 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <optional>
 #include <set>
@@ -464,7 +465,7 @@ std::string listStamp()
 {
     std::error_code ec;
     const auto t = fs::last_write_time(brushDir() / "GoZ_ObjectList.txt", ec);
-    return ec ? std::string() : std::to_string(t.time_since_epoch().count());
+    return ec ? std::string() : std::format("{}", t.time_since_epoch().count());
 }
 
 std::string exeName(const fs::path& exe) { return paths::toUtf8(exe.filename()); }

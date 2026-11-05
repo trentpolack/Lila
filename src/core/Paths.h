@@ -2,6 +2,8 @@
 
 #include "core/Export.h"
 
+#include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <string>
 #include <string_view>
@@ -9,6 +11,17 @@
 namespace lila::paths
 {
 namespace fs = std::filesystem;
+
+/** File timestamp as seconds since the Unix epoch, independent of the filesystem clock's epoch. */
+inline int64_t unixSeconds(fs::file_time_type time)
+{
+#if defined(_WIN32)
+    const auto systemTime = std::chrono::clock_cast<std::chrono::system_clock>(time);
+#else
+    const auto systemTime = fs::file_time_type::clock::to_sys(time);
+#endif
+    return std::chrono::duration_cast<std::chrono::seconds>(systemTime.time_since_epoch()).count();
+}
 
 /** %APPDATA%/Lila, ~/.config/Lila, ~/Library/Application Support/Lila. Created on first call. */
 LILA_FOUNDATION_API fs::path userConfigDir();

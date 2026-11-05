@@ -33,6 +33,11 @@ find_path(_third_party_inc glm/glm.hpp REQUIRED)
 foreach(_dir glm nlohmann tbb oneapi)
     install(DIRECTORY ${_third_party_inc}/${_dir} DESTINATION include COMPONENT sdk)
 endforeach()
+if(APPLE)
+    install(DIRECTORY ${_third_party_inc}/fast_float DESTINATION include COMPONENT sdk)
+    install(FILES ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share/fast-float/copyright
+            DESTINATION share/licenses/fast-float COMPONENT sdk)
+endif()
 
 install(FILES $<TARGET_LINKER_FILE:LilaFoundation> $<TARGET_LINKER_FILE:LilaScene> $<TARGET_LINKER_FILE:LilaUI> ${_tbb_implib}
         DESTINATION lib COMPONENT sdk)

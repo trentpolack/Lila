@@ -106,7 +106,7 @@ struct Cursor
             p = q;
             return true;
         }
-        auto [ptr, ec] = std::from_chars(p, end, out);
+        auto [ptr, ec] = lila::fromChars(p, end, out);
         if (ec != std::errc())
             return false;
         p = ptr;

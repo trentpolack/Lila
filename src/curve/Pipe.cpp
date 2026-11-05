@@ -1,5 +1,7 @@
 #include "curve/Pipe.h"
 
+#include "core/Decimal.h"
+
 #include "core/Profile.h"
 #include "curve/CurveMath.h"
 #include "curve/Internal.h"
@@ -430,7 +432,7 @@ std::vector<double> parseNumbers(std::string_view list)
         while (j < list.size() && list[j] != ' ' && list[j] != ',' && list[j] != '\t')
             ++j;
         double v = 0.0;
-        if (j > i && std::from_chars(list.data() + i, list.data() + j, v).ec == std::errc())
+        if (j > i && lila::fromChars(list.data() + i, list.data() + j, v).ec == std::errc())
             out.push_back(v);
         i = j;
     }

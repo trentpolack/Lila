@@ -4,6 +4,7 @@
 #include <vulkan/vulkan_beta.h>
 
 #include "core/SystemMemory.h"
+#include "core/Paths.h"
 #include "python/RuntimePaths.h"
 #include "render/VulkanRequirements.h"
 
@@ -11,6 +12,21 @@
 #include <filesystem>
 
 using namespace lila;
+
+TEST_CASE("file timestamps convert to Unix seconds on each standard library")
+{
+    using namespace std::chrono;
+    for (int64_t expected : {int64_t(-86400), int64_t(0), int64_t(946684800), int64_t(4102444800)})
+    {
+        const sys_seconds systemTime{seconds{expected}};
+#if defined(_WIN32)
+        const auto fileTime = clock_cast<std::filesystem::file_time_type::clock>(systemTime);
+#else
+        const auto fileTime = std::filesystem::file_time_type::clock::from_sys(systemTime);
+#endif
+        CHECK(paths::unixSeconds(fileTime) == expected);
+    }
+}
 
 TEST_CASE("Vulkan baseline does not require optional raster features")
 {

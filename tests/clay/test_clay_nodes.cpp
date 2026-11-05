@@ -215,18 +215,18 @@ TEST_CASE("clay commands: duplicate copies shapes and links into the clay, links
 {
     reset();
     const json made = run("createClay", {{"name", "Hand"}, {"symmetry", "off"}});
-    const std::string object = made[0], palm = made[3];
+    const std::string object = made[0], clay = made[2], palm = made[3];
     const std::string knuckle = run("addClayPrimitive", {{"args", {object}}, {"radius", 3.0}, {"position", {0, 20, 0}}});
     const std::string tip = run("addClayPrimitive", {{"args", {object}}, {"radius", 2.0}, {"position", {0, 30, 0}}});
     const std::string toKnuckle = run("addClayLink", {{"args", {palm, knuckle}}, {"skipSelect", true}});
     const std::string toTip = run("addClayLink", {{"args", {knuckle, tip}}, {"skipSelect", true}});
     scene::Graph& g = scene::Graph::current();
     g.evaluate();
-    const size_t items = g.elements({g.find(made[2])->id(), g.find(made[2])->type().attrIndex("items")}).size();
+    const size_t items = g.elements({g.find(clay)->id(), g.find(clay)->type().attrIndex("items")}).size();
 
     const json copies = run("duplicate", {{"args", {knuckle, tip, toKnuckle, toTip}}});
     REQUIRE(copies.size() == 4);
-    CHECK(g.elements({g.find(made[2])->id(), g.find(made[2])->type().attrIndex("items")}).size() == items + 4);
+    CHECK(g.elements({g.find(clay)->id(), g.find(clay)->type().attrIndex("items")}).size() == items + 4);
 
     auto endOf = [&](const std::string& link, const char* end) {
         const scene::Node* n = g.find(link);

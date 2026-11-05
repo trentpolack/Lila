@@ -19,6 +19,14 @@ namespace lila::media
 {
 namespace
 {
+// Apple libc++ still needs the shared_ptr atomic free functions; keep atomic<shared_ptr> where available.
+template <class T> using AudioSnapshot =
+#if defined(__cpp_lib_atomic_shared_ptr)
+    std::atomic<std::shared_ptr<const T>>;
+#else
+    std::shared_ptr<const T>;
+#endif
+
 struct Transport
 {
     bool playing = false;
@@ -38,8 +46,8 @@ struct OneShot
 
 struct AudioEngine::Impl
 {
-    std::atomic<std::shared_ptr<const std::vector<Voice>>> voices{std::make_shared<const std::vector<Voice>>()};
-    std::atomic<std::shared_ptr<const Transport>> transport{std::make_shared<const Transport>()};
+    AudioSnapshot<std::vector<Voice>> voices{std::make_shared<const std::vector<Voice>>()};
+    AudioSnapshot<Transport> transport{std::make_shared<const Transport>()};
     std::atomic<int64_t> rendered{0};
     std::mutex pendingMutex;
     std::vector<OneShot> pending;
@@ -53,7 +61,7 @@ struct AudioEngine::Impl
 
     void renderInto(float* out, int frames)
     {
-        const std::shared_ptr<const Transport> t = transport.load();
+        const std::shared_ptr<const Transport> t = std::atomic_load(&transport);
         const int64_t start = rendered.load();
         std::fill(out, out + size_t(frames) * 2, 0.0f);
         if (t->playing)
@@ -64,7 +72,7 @@ struct AudioEngine::Impl
                 count = int(std::clamp<int64_t>(t->limit - from, 0, frames));
             if (count > 0)
             {
-                const std::shared_ptr<const std::vector<Voice>> v = voices.load();
+                const std::shared_ptr<const std::vector<Voice>> v = std::atomic_load(&voices);
                 mix(*v, t->time + double(from) / kSampleRate * t->speed, t->speed, kSampleRate, out, count);
             }
         }
@@ -96,7 +104,7 @@ struct AudioEngine::Impl
     void publish(Transport t)
     {
         t.anchor = rendered.load();
-        transport.store(std::make_shared<const Transport>(t));
+        std::atomic_store(&transport, std::make_shared<const Transport>(t));
     }
 };
 
@@ -169,7 +177,7 @@ void AudioEngine::close()
 
 void AudioEngine::setVoices(std::vector<Voice> voices)
 {
-    mImpl->voices.store(std::make_shared<const std::vector<Voice>>(std::move(voices)));
+    std::atomic_store(&mImpl->voices, std::make_shared<const std::vector<Voice>>(std::move(voices)));
 }
 
 void AudioEngine::play(double sceneTime, double speed)
@@ -184,7 +192,7 @@ void AudioEngine::stop()
 
 bool AudioEngine::playing() const
 {
-    const auto t = mImpl->transport.load();
+    const auto t = std::atomic_load(&mImpl->transport);
     return t->playing && t->limit < 0;
 }
 
@@ -206,7 +214,7 @@ std::optional<double> AudioEngine::clock() const
     const Impl& d = *mImpl;
     if (!d.deviceOpen)
         return std::nullopt;
-    const auto t = d.transport.load();
+    const auto t = std::atomic_load(&d.transport);
     if (!t->playing || t->limit >= 0)
         return std::nullopt;
     const int64_t heard = std::max<int64_t>(0, d.rendered.load() - t->anchor - d.latency);

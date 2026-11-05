@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <format>
 #include <list>
 #include <mutex>
 #include <stdexcept>
@@ -142,7 +143,7 @@ std::string highFileKey(const HighEntry& e)
         return {};
     const auto stamp = fs::last_write_time(p, ec).time_since_epoch().count();
     uint64_t h = fnv(lower(paths::toUtf8(p)));
-    h = fnv(std::to_string(size) + "|" + std::to_string(stamp) + "|" + e.object + "|" + std::to_string(e.frame), h);
+    h = fnv(std::to_string(size) + "|" + std::format("{}", stamp) + "|" + e.object + "|" + std::to_string(e.frame), h);
     if (lower(p.extension().string()) == ".abc")
         h = fnv(std::to_string(scene::anim::playback().fps), h);
     char buf[17];

@@ -41,7 +41,7 @@ std::shared_ptr<const Loaded> loadBake(const std::filesystem::path& file, const 
     auto stamp = std::filesystem::last_write_time(file, ec);
     if (ec)
         return nullptr;
-    std::string key = paths::toUtf8(file) + "|" + std::to_string(stamp.time_since_epoch().count());
+    std::string key = std::format("{}|{}", paths::toUtf8(file), stamp.time_since_epoch().count());
     {
         std::lock_guard lock(mutex);
         for (auto it = recent.begin(); it != recent.end(); ++it)

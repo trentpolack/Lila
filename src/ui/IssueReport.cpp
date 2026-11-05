@@ -402,7 +402,7 @@ QString crashWhen(const fs::path& dir)
     const auto t = fs::last_write_time(dir / "report.txt", ec);
     if (ec)
         return QString::fromStdString(paths::toUtf8(dir.filename()));
-    const auto secs = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::clock_cast<std::chrono::system_clock>(t).time_since_epoch()).count();
+    const auto secs = paths::unixSeconds(t);
     return QDateTime::fromSecsSinceEpoch(secs).toString("d MMM yyyy, h:mm ap");
 }
 

@@ -224,7 +224,7 @@ TEST_CASE("placing a primitive turns the scene up to the surface normal")
     scene::Graph& g = scene::Graph::current();
     g.evaluate();
     // The cylinder's axis is x in object space; standing its y on +z leaves the axis along world x.
-    const glm::dmat4 w = g.find(r[0])->as<glm::dmat4>(scene::Transform::kWorldMatrix);
+    const glm::dmat4 w = g.find(r[0].get<std::string>())->as<glm::dmat4>(scene::Transform::kWorldMatrix);
     const glm::dvec3 axis = glm::dvec3(w * glm::dvec4(1, 0, 0, 0));
     CHECK(std::abs(axis.x) == doctest::Approx(1.0));
 }
