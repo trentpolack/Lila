@@ -1,4 +1,5 @@
 #include "python/Python.h"
+#include "python/RuntimePaths.h"
 
 #include "core/CrashHandler.h"
 #include "core/Log.h"
@@ -21,11 +22,6 @@ namespace
 {
 bool gInitialized = false;
 PyThreadState* gMainState = nullptr;
-
-std::wstring widen(const std::filesystem::path& p)
-{
-    return p.wstring();
-}
 
 /** Closes undo chunks a script opened and never closed, so later edits don't keep landing in its step. */
 struct ChunkGuard
@@ -127,12 +123,14 @@ bool init(const std::vector<std::string>& argv)
     config.write_bytecode = 1;
 
     // An installed build carries its own interpreter; dev builds use the one they were configured against.
-    std::filesystem::path home = paths::executableDir() / "python-runtime";
-    if (!std::filesystem::exists(home / "Lib"))
-        home = LILA_PYTHON_HOME;
-    if (const char* env = std::getenv("LILA_PYTHON_HOME"); env && *env)
-        home = env;
-    PyConfig_SetString(&config, &config.home, widen(home).c_str());
+    const auto home = runtimeHome(paths::executableDir(), paths::fromUtf8(LILA_PYTHON_HOME), LILA_PYTHON_STDLIB_SUBDIR,
+                                  std::getenv("LILA_PYTHON_HOME"));
+#ifdef _WIN32
+    PyConfig_SetString(&config, &config.home, home.wstring().c_str());
+#else
+    // Let Python decode the native filesystem encoding, including non-ASCII macOS account names.
+    PyConfig_SetBytesString(&config, &config.home, home.c_str());
+#endif
 
     std::vector<std::wstring> wargs;
     for (const std::string& a : argv)

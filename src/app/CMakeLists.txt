@@ -9,6 +9,7 @@ target_link_libraries(lila PRIVATE LilaUI)
 target_compile_definitions(lila PRIVATE LILA_GUI_SUBSYSTEM)
 add_executable(lilabatch batch.cpp $<$<PLATFORM_ID:Windows>:lila.rc>)
 target_link_libraries(lilabatch PRIVATE LilaScene)
+target_compile_definitions(lilabatch PRIVATE LILA_UI_LIBRARY="$<TARGET_FILE_NAME:LilaUI>")
 # Loaded at run time for the capture commands when it is there; lilabatch runs without it.
 add_dependencies(lilabatch LilaUI)
 add_dependencies(lila lilabatch)

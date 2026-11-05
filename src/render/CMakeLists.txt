@@ -1,3 +1,7 @@
+set(_lila_surface Surface.cpp)
+if(APPLE)
+    set(_lila_surface SurfaceMac.mm)
+endif()
 lila_module(lila_render UI
     Backdrop.cpp
     Baker.cpp
@@ -20,7 +24,7 @@ lila_module(lila_render UI
     Renderer.cpp
     ShadingModels.cpp
     SharedMemory.cpp
-    Surface.cpp
+    ${_lila_surface}
     TexEval.cpp
     TexEvalState.cpp
     TexEvalRecord.cpp
@@ -30,6 +34,15 @@ lila_module(lila_render UI
     VulkanContext.cpp)
 
 target_link_libraries(lila_render PUBLIC lila_core volk::volk Vulkan::Headers GPUOpen::VulkanMemoryAllocator)
+# Vulkan headers still gate the portability subset's structure IDs behind this switch.
+target_compile_definitions(lila_render PRIVATE VK_ENABLE_BETA_EXTENSIONS)
+if(APPLE)
+    find_library(LILA_MOLTENVK NAMES MoltenVK
+        HINTS "$ENV{VULKAN_SDK}/lib" /opt/homebrew/lib /opt/homebrew/opt/molten-vk/lib REQUIRED)
+    target_compile_definitions(lila_render PRIVATE LILA_MOLTENVK="${LILA_MOLTENVK}")
+    target_link_libraries(lila_render PRIVATE "-framework AppKit" "-framework QuartzCore")
+    set_source_files_properties(SurfaceMac.mm PROPERTIES COMPILE_OPTIONS "-fno-objc-arc" SKIP_UNITY_BUILD_INCLUSION ON)
+endif()
 
 lila_add_shaders(lila_render FILES
     shaders/ao.slang

@@ -30,6 +30,10 @@ function(lila_add_extension target)
         OUTPUT_NAME ${ARG_ID}
         PREFIX ""
         LIBRARY_OUTPUT_DIRECTORY ${package})
+    if(APPLE)
+        # CMake MODULE libraries otherwise use .so, while Lila's manifests and loader expect .dylib.
+        set_target_properties(${target} PROPERTIES SUFFIX ".dylib")
+    endif()
     cmake_path(ABSOLUTE_PATH ARG_MANIFEST BASE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE manifest)
     add_custom_command(TARGET ${target} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different ${manifest} ${package}/extension.json

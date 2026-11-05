@@ -18,6 +18,13 @@ endif()
 set(VCPKG_OVERLAY_TRIPLETS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/triplets")
 
 project(Lila VERSION 0.1.0 LANGUAGES C CXX)
+if(APPLE)
+    enable_language(OBJCXX)
+    set(CMAKE_OBJCXX_STANDARD 20)
+    set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
+    # Development builds load sibling Lila libraries and vcpkg's dynamic dependencies.
+    list(APPEND CMAKE_BUILD_RPATH "@loader_path")
+endif()
 
 if(MSVC AND CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/triplets/x64-windows.cmake" _lila_toolset REGEX "VCPKG_PLATFORM_TOOLSET_VERSION")
@@ -54,6 +61,7 @@ endif()
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 find_package(Python 3.14 EXACT REQUIRED COMPONENTS Interpreter Development.Module Development.Embed)
+include(LilaPythonHome)
 # Qt is vcpkg's, also in build folders whose cache still points at a Qt installed elsewhere.
 if(VCPKG_INSTALLED_DIR)
     get_cmake_property(_cache_vars CACHE_VARIABLES)

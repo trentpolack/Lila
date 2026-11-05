@@ -9,6 +9,13 @@
 
 namespace lila::render
 {
+SurfaceWindow prepareSurfaceWindow(uintptr_t nativeWindow, int, int)
+{
+    return {nativeWindow, {}};
+}
+
+void resizeSurfaceWindow(const SurfaceWindow&, uintptr_t, int, int) {}
+
 VkSurfaceKHR createSurface(VkInstance instance, uintptr_t nativeWindow)
 {
     VkSurfaceKHR surface = VK_NULL_HANDLE;

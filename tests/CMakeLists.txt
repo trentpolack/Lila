@@ -102,6 +102,11 @@ target_link_libraries(lila_tests PRIVATE miniz::miniz)
 # The batch run tests start real lilabatch workers.
 add_dependencies(lila_tests lilabatch)
 add_test(NAME lila_tests COMMAND lila_tests)
+if(APPLE)
+    add_test(NAME lila_macos_smoke COMMAND lilabatch --batch ${CMAKE_SOURCE_DIR}/python/tests/test_macos_smoke.py)
+    set_tests_properties(lila_macos_smoke PROPERTIES LABELS "macos;gpu"
+        ENVIRONMENT "LILA_CONFIG_DIR=${CMAKE_CURRENT_BINARY_DIR}/macos-smoke-config" TIMEOUT 300)
+endif()
 # Two sources of one target defining the same file-local name break unity builds once a chunk boundary moves.
 add_test(NAME lila_unity_clashes COMMAND ${Python_EXECUTABLE} -I ${CMAKE_SOURCE_DIR}/scripts/unity_clashes.py --build ${CMAKE_BINARY_DIR})
 # Fails when a Qt bump leaves the bundled PySide6 behind or it starts loading its own Qt.
@@ -128,6 +133,7 @@ if(WIN32)
 endif()
 
 add_subdirectory(math)
+add_subdirectory(portability)
 add_subdirectory(geo)
 add_subdirectory(curve)
 add_subdirectory(vcs)

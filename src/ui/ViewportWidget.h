@@ -238,6 +238,7 @@ private:
     void clearPreselect();
     void drawPreselect(render::FrameState& s);
     QSize pixelSize() const;
+    void syncNativeSurface();
     double aspect() const;
     CameraView cameraView() const;
     void applyCameraView(const CameraView& v);

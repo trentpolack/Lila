@@ -2,12 +2,9 @@
 #include "core/CrashHandler.h"
 #include "core/Paths.h"
 #include "core/Version.h"
+#include "extensions/Library.h"
 
 #include <cstdio>
-
-#ifdef _WIN32
-#include <windows.h>
-#endif
 
 using namespace lila;
 
@@ -19,19 +16,22 @@ namespace
  */
 void loadUiCommands()
 {
-#ifdef _WIN32
-    const std::filesystem::path dll = paths::executableDir() / "LilaUI.dll";
-    HMODULE ui = LoadLibraryW(dll.c_str());
+    const auto dll = paths::executableDir() / LILA_UI_LIBRARY;
+    std::string error;
+    auto ui = extensions::Library::open(dll, &error);
     if (!ui)
     {
-        std::fprintf(stderr, "lilabatch: %s did not load (error %lu): captureView, captureTurntable and the other UI commands are "
-                             "unavailable\n", dll.string().c_str(), GetLastError());
+        std::fprintf(stderr, "lilabatch: %s did not load (%s): captureView, GPU bake and the other UI commands are unavailable\n",
+                     dll.string().c_str(), error.c_str());
         return;
     }
     using RegisterFn = void (*)();
-    if (auto fn = reinterpret_cast<RegisterFn>(GetProcAddress(ui, "lilaUiRegisterBatchCommands")))
+    // Registered commands and shutdown hooks outlive this local handle.
+    ui->leak();
+    if (auto fn = reinterpret_cast<RegisterFn>(ui->symbol("lilaUiRegisterBatchCommands")))
         fn();
-#endif
+    else
+        std::fprintf(stderr, "lilabatch: %s has no batch command entry point\n", dll.string().c_str());
 }
 } // namespace
 

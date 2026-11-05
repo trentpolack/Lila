@@ -14,6 +14,7 @@
 #include "render/Surface.h"
 #include "render/VirtualTexture.h"
 #include "render/VulkanContext.h"
+#include "render/VulkanRequirements.h"
 
 #include <glm/gtc/packing.hpp>
 #include <tbb/parallel_for.h>
@@ -523,6 +524,7 @@ struct Frame
 struct Viewport
 {
     uintptr_t window = 0;
+    SurfaceWindow surfaceWindow;
     VkSurfaceKHR surface = VK_NULL_HANDLE;
     VkSwapchainKHR swapchain = VK_NULL_HANDLE;
     VkFormat format = VK_FORMAT_B8G8R8A8_SRGB;
@@ -1000,16 +1002,23 @@ struct Renderer::Impl
         if (v.offscreen)
             return createOffscreenTargets(v);
         vkDeviceWaitIdle(vk.device);
-        VkSurfaceCapabilitiesKHR caps;
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vk.physical, v.surface, &caps);
+        VkSurfaceCapabilitiesKHR caps{};
+        if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vk.physical, v.surface, &caps) != VK_SUCCESS)
+            return false;
         VkExtent2D extent = caps.currentExtent;
         if (extent.width == UINT32_MAX)
-            extent = {uint32_t(v.width), uint32_t(v.height)};
+            extent = {std::clamp(uint32_t(v.width), caps.minImageExtent.width, caps.maxImageExtent.width),
+                      std::clamp(uint32_t(v.height), caps.minImageExtent.height, caps.maxImageExtent.height)};
         if (extent.width == 0 || extent.height == 0)
             return false;
 
         uint32_t fn = 0;
         vkGetPhysicalDeviceSurfaceFormatsKHR(vk.physical, v.surface, &fn, nullptr);
+        if (!fn)
+        {
+            log::error("render: the window surface has no usable formats");
+            return false;
+        }
         std::vector<VkSurfaceFormatKHR> formats(fn);
         vkGetPhysicalDeviceSurfaceFormatsKHR(vk.physical, v.surface, &fn, formats.data());
         VkSurfaceFormatKHR chosen = formats[0];
@@ -1031,7 +1040,7 @@ struct Renderer::Impl
         sci.imageArrayLayers = 1;
         sci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         sci.preTransform = caps.currentTransform;
-        sci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+        sci.compositeAlpha = surfaceCompositeAlpha(caps.supportedCompositeAlpha);
         sci.presentMode = presentMode(v.surface, v.vsync);
         sci.clipped = VK_TRUE;
         sci.oldSwapchain = old;
@@ -3741,6 +3750,8 @@ struct Renderer::Impl
     /** A requested line width within what the device rasterizes. */
     float lineWidth(float w) const
     {
+        if (!vk.wideLines)
+            return 1.0f;
         const float* range = vk.properties.limits.lineWidthRange;
         return std::clamp(w, std::max(1.0f, range[0]), std::max(1.0f, range[1]));
     }
@@ -6048,7 +6059,9 @@ struct Renderer::Impl
             for (int c = 0; c < 3; ++c)
                 p.colors[c] = d.colors[c];
             const float* range = vk.properties.limits.pointSizeRange;
-            p.sizes = glm::vec4(std::clamp(d.size, range[0], range[1]), std::clamp(d.selectedSize, range[0], range[1]), 0.0f, 0.0f);
+            p.sizes = vk.largePoints
+                          ? glm::vec4(std::clamp(d.size, range[0], range[1]), std::clamp(d.selectedSize, range[0], range[1]), 0.0f, 0.0f)
+                          : glm::vec4(1.0f, 1.0f, 0.0f, 0.0f);
             vkCmdPushConstants(cmd, pointsLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(p), &p);
             if (const int k = i < frameCulledPoints.size() ? frameCulledPoints[i] : -1; k >= 0)
             {
@@ -6194,8 +6207,20 @@ struct Renderer::Impl
                 }
                 if (!v.surface)
                 {
-                    v.surface = createSurface(vk.instance, v.window);
-                    initFrames(v);
+                    v.surface = createSurface(vk.instance, v.surfaceWindow.handle);
+                    if (v.surface)
+                    {
+                        VkBool32 present = VK_FALSE;
+                        vkGetPhysicalDeviceSurfaceSupportKHR(vk.physical, vk.queueFamily, v.surface, &present);
+                        if (!present)
+                        {
+                            log::error("render: the selected GPU queue cannot present to this window");
+                            vkDestroySurfaceKHR(vk.instance, v.surface, nullptr);
+                            v.surface = VK_NULL_HANDLE;
+                        }
+                        else
+                            initFrames(v);
+                    }
                 }
                 if (!v.surface)
                     continue;
@@ -6318,9 +6343,13 @@ bool Renderer::running() const { return m->started; }
 
 ViewportId Renderer::addViewport(uintptr_t nativeWindow, int width, int height)
 {
+    SurfaceWindow surfaceWindow = prepareSurfaceWindow(nativeWindow, width, height);
+    if (!surfaceWindow.handle)
+        return 0;
     std::scoped_lock lock(m->mutex);
     auto v = std::make_unique<Viewport>();
     v->window = nativeWindow;
+    v->surfaceWindow = std::move(surfaceWindow);
     v->width = width;
     v->height = height;
     ViewportId id = m->nextId++;
@@ -6351,19 +6380,24 @@ void Renderer::removeAllViewports()
 
 void Renderer::resize(ViewportId id, int width, int height)
 {
+    SurfaceWindow surfaceWindow;
+    uintptr_t nativeWindow = 0;
     {
         std::scoped_lock lock(m->mutex);
         auto it = m->viewports.find(id);
         if (it == m->viewports.end())
             return;
         Viewport& v = *it->second;
-        if (v.width == width && v.height == height)
-            return;
+        surfaceWindow = v.surfaceWindow;
+        nativeWindow = v.window;
         // The swapchain is rebuilt with the next submitted frame, which carries the matching projection.
+        if (v.width != width || v.height != height)
+            v.needsRecreate = true;
         v.width = width;
         v.height = height;
-        v.needsRecreate = true;
     }
+    // AppKit work stays on the caller's GUI thread, outside the render mutex.
+    resizeSurfaceWindow(surfaceWindow, nativeWindow, width, height);
 }
 
 void Renderer::submit(ViewportId id, FrameState state)

@@ -186,7 +186,8 @@ struct LILA_SCENE_API BrushSettings
 
     json toJson() const;
     /** Keys missing from j keep the values in `defaults`. */
-    static BrushSettings fromJson(const json& j, const BrushSettings& defaults = {});
+    static BrushSettings fromJson(const json& j);
+    static BrushSettings fromJson(const json& j, const BrushSettings& defaults);
 
     /**
      * Reads and writes the settings as keys under prefix (e.g. "/vertexPaint") in the general prefs: radius, strength,

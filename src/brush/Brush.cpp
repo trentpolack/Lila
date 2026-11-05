@@ -188,6 +188,11 @@ json BrushSettings::toJson() const
             {"seed", seed}};
 }
 
+BrushSettings BrushSettings::fromJson(const json& j)
+{
+    return fromJson(j, BrushSettings{});
+}
+
 BrushSettings BrushSettings::fromJson(const json& j, const BrushSettings& defaults)
 {
     BrushSettings s = defaults;

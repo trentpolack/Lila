@@ -25,14 +25,42 @@
         "CMAKE_CXX_COMPILER": "cl",
         "Python_ROOT_DIR": "$env{LILA_PYTHON_DIR}"
       }
+    },
+    {
+      "name": "macos-arm64",
+      "inherits": "base",
+      "displayName": "Apple Silicon developer build (MoltenVK)",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" },
+      "binaryDir": "${sourceDir}/build/macos-arm64",
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "arm64-osx-lila",
+        "VCPKG_HOST_TRIPLET": "arm64-osx",
+        "CMAKE_OSX_ARCHITECTURES": "arm64",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "14.0",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_OBJCXX_COMPILER": "clang++",
+        "LILA_USD": "OFF",
+        "LILA_VOLUMES": "OFF",
+        "LILA_PYSIDE": "OFF",
+        "LILA_NO_TRACY": "ON",
+        "LILA_DOCS_REPO": ""
+      }
     }
   ],
   "buildPresets": [
     { "name": "debug", "configurePreset": "windows", "configuration": "Debug" },
     { "name": "dev", "configurePreset": "windows", "configuration": "RelWithDebInfo" },
-    { "name": "release", "configurePreset": "windows", "configuration": "Release" }
+    { "name": "release", "configurePreset": "windows", "configuration": "Release" },
+    { "name": "macos-dev", "configurePreset": "macos-arm64", "configuration": "RelWithDebInfo" }
   ],
   "testPresets": [
-    { "name": "dev", "configurePreset": "windows", "configuration": "RelWithDebInfo", "output": { "outputOnFailure": true } }
+    { "name": "dev", "configurePreset": "windows", "configuration": "RelWithDebInfo", "output": { "outputOnFailure": true } },
+    {
+      "name": "macos-dev", "configurePreset": "macos-arm64", "configuration": "RelWithDebInfo",
+      "output": { "outputOnFailure": true },
+      "filter": { "exclude": { "label": "slow|known_failing" } },
+      "environment": { "LILA_CONFIG_DIR": "${sourceDir}/build/macos-arm64/test-config" }
+    }
   ]
 }

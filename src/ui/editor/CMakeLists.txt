@@ -21,5 +21,4 @@ lila_module(lila_editor UI
 set_target_properties(lila_editor PROPERTIES AUTOMOC ON)
 target_link_libraries(lila_editor PUBLIC lila_python lila_layouts Qt6::Widgets nlohmann_json::nlohmann_json PRIVATE Python::Python)
 
-cmake_path(GET Python_EXECUTABLE PARENT_PATH LILA_EDITOR_PYTHON_HOME)
-target_compile_definitions(lila_editor PRIVATE LILA_PYTHON_HOME="${LILA_EDITOR_PYTHON_HOME}")
+target_compile_definitions(lila_editor PRIVATE LILA_PYTHON_HOME="${LILA_PYTHON_HOME}")

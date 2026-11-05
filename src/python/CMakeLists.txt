@@ -18,5 +18,5 @@ target_link_libraries(lila_python PUBLIC lila_scene lila_math lila_debug lila_vc
 nanobind_compile_options(lila_python)
 nanobind_link_options(lila_python)
 
-cmake_path(GET Python_EXECUTABLE PARENT_PATH LILA_PYTHON_HOME)
-target_compile_definitions(lila_python PRIVATE LILA_PYTHON_HOME="${LILA_PYTHON_HOME}")
+target_compile_definitions(lila_python PRIVATE LILA_PYTHON_HOME="${LILA_PYTHON_HOME}"
+    LILA_PYTHON_STDLIB_SUBDIR="${LILA_PYTHON_STDLIB_SUBDIR}")

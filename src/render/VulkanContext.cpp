@@ -2,6 +2,7 @@
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
 #include "render/VulkanContext.h"
+#include "render/VulkanRequirements.h"
 
 #include "core/CrashHandler.h"
 #include "core/Log.h"
@@ -11,6 +12,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#ifdef __APPLE__
+#include <dlfcn.h>
+#endif
 
 namespace lila::render
 {
@@ -90,16 +94,34 @@ bool VulkanContext::init(bool validation)
 {
     LILA_ZONE();
 
+#ifdef __APPLE__
+    // Load the configured MoltenVK directly: source builds need no global loader/ICD installation or DYLD setup.
+    // Keep it loaded for the process lifetime, including renderer restarts and GPU work in extensions.
+    static void* molten = dlopen(LILA_MOLTENVK, RTLD_NOW | RTLD_LOCAL);
+    const auto getProc = molten ? reinterpret_cast<PFN_vkGetInstanceProcAddr>(dlsym(molten, "vkGetInstanceProcAddr")) : nullptr;
+    if (!getProc)
+    {
+        log::error("vulkan: cannot load MoltenVK at {}; reconfigure LILA_MOLTENVK to an ARM64 library", LILA_MOLTENVK);
+        return false;
+    }
+    volkInitializeCustom(getProc);
+#else
     if (volkInitialize() != VK_SUCCESS)
     {
         log::error("vulkan: no Vulkan loader found; update the GPU driver");
         return false;
     }
+#endif
 
     std::vector<const char*> exts = {VK_KHR_SURFACE_EXTENSION_NAME};
 #ifdef _WIN32
     exts.push_back("VK_KHR_win32_surface");
+#elif defined(__APPLE__)
+    exts.push_back("VK_EXT_metal_surface");
 #endif
+    const bool portability = hasInstanceExtension(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+    if (portability)
+        exts.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
     std::vector<const char*> layers;
     validation = validation && hasLayer("VK_LAYER_KHRONOS_validation");
     if (validation)
@@ -114,6 +136,7 @@ bool VulkanContext::init(bool validation)
     app.apiVersion = VK_API_VERSION_1_3;
 
     VkInstanceCreateInfo ici{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
+    ici.flags = portability ? VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR : 0;
     ici.pApplicationInfo = &app;
     ici.enabledExtensionCount = uint32_t(exts.size());
     ici.ppEnabledExtensionNames = exts.data();
@@ -149,6 +172,18 @@ bool VulkanContext::init(bool validation)
         vkGetPhysicalDeviceProperties(d, &p);
         if (p.apiVersion < VK_API_VERSION_1_3)
             continue;
+        VkPhysicalDevicePortabilitySubsetFeaturesKHR port{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR};
+        const bool subset = hasDeviceExtension(d, "VK_KHR_portability_subset");
+        VkPhysicalDeviceVulkan13Features have13{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES, subset ? &port : nullptr};
+        VkPhysicalDeviceVulkan12Features have12{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES, &have13};
+        VkPhysicalDeviceVulkan11Features have11{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES, &have12};
+        VkPhysicalDeviceFeatures2 have{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &have11};
+        vkGetPhysicalDeviceFeatures2(d, &have);
+        if (const char* missing = missingRequiredFeature(have11, have12, have13, subset ? &port : nullptr))
+        {
+            log::warn("vulkan: {} lacks required feature {}", p.deviceName, missing);
+            continue;
+        }
         int score = p.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ? 2 : 1;
         if (score > best)
         {
@@ -159,7 +194,8 @@ bool VulkanContext::init(bool validation)
     }
     if (!physical)
     {
-        log::error("vulkan: no GPU with Vulkan 1.3");
+        log::error("vulkan: no GPU with Vulkan 1.3 and the required rendering/compute features");
+        shutdown();
         return false;
     }
     deviceName = properties.deviceName;
@@ -201,11 +237,11 @@ bool VulkanContext::init(bool validation)
     f12.bufferDeviceAddress = VK_TRUE;
     VkPhysicalDeviceFeatures2 f2{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
     f2.pNext = &f12;
-    f2.features.wideLines = VK_TRUE;
-    f2.features.largePoints = VK_TRUE;
-    f2.features.fillModeNonSolid = VK_TRUE;
     VkPhysicalDeviceFeatures supported;
     vkGetPhysicalDeviceFeatures(physical, &supported);
+    f2.features = rasterFeatures(supported);
+    wideLines = supported.wideLines == VK_TRUE;
+    largePoints = supported.largePoints == VK_TRUE;
     anisotropy = supported.samplerAnisotropy == VK_TRUE;
     f2.features.samplerAnisotropy = supported.samplerAnisotropy;
     bcTextures = supported.textureCompressionBC == VK_TRUE;
@@ -220,6 +256,17 @@ bool VulkanContext::init(bool validation)
     vkGetPhysicalDeviceFeatures2(physical, &f2Have);
 
     std::vector<const char*> devExts = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+    // Vulkan requires enabling this device extension when a portability implementation advertises it.
+    VkPhysicalDevicePortabilitySubsetFeaturesKHR port{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PORTABILITY_SUBSET_FEATURES_KHR};
+    if (hasDeviceExtension(physical, "VK_KHR_portability_subset"))
+    {
+        devExts.push_back("VK_KHR_portability_subset");
+        VkPhysicalDeviceFeatures2 available{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &port};
+        vkGetPhysicalDeviceFeatures2(physical, &available);
+        // Enable supported subset behavior, including the component swizzles used by grayscale/height textures.
+        port.pNext = f13.pNext;
+        f13.pNext = &port;
+    }
     const bool hasRt = hasDeviceExtension(physical, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME) &&
                        hasDeviceExtension(physical, VK_KHR_RAY_QUERY_EXTENSION_NAME) &&
                        hasDeviceExtension(physical, VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME) && asHave.accelerationStructure &&
@@ -233,6 +280,7 @@ bool VulkanContext::init(bool validation)
         devExts.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
         as.accelerationStructure = VK_TRUE;
         rq.rayQuery = VK_TRUE;
+        rq.pNext = f13.pNext;
         f13.pNext = &as;
         rayQuery = true;
         VkPhysicalDeviceAccelerationStructurePropertiesKHR asProps{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR};
@@ -314,6 +362,7 @@ bool VulkanContext::init(bool validation)
     if (VkResult r = vkCreateDevice(physical, &dci, nullptr, &device); r != VK_SUCCESS)
     {
         log::error("vulkan: vkCreateDevice failed ({})", vkResultName(r));
+        shutdown();
         return false;
     }
     volkLoadDevice(device);
@@ -329,7 +378,12 @@ bool VulkanContext::init(bool validation)
     aci.device = device;
     aci.instance = instance;
     aci.pVulkanFunctions = &fns;
-    vmaCreateAllocator(&aci, &allocator);
+    if (VkResult r = vmaCreateAllocator(&aci, &allocator); r != VK_SUCCESS)
+    {
+        log::error("vulkan: allocator creation failed ({})", vkResultName(r));
+        shutdown();
+        return false;
+    }
 
     log::info("vulkan: {} ({}x MSAA{}{})", deviceName, int(msaa), rayQuery ? ", ray query" : "", validation ? ", validation on" : "");
     return true;
@@ -350,6 +404,9 @@ void VulkanContext::shutdown()
     allocator = VK_NULL_HANDLE;
     device = VK_NULL_HANDLE;
     instance = VK_NULL_HANDLE;
+    physical = VK_NULL_HANDLE;
+    queue = VK_NULL_HANDLE;
+    mMessenger = VK_NULL_HANDLE;
 }
 
 const char* vkResultName(VkResult r)

@@ -60,6 +60,8 @@
 #include <cstdlib>
 #ifdef _WIN32
 #include <io.h>
+#else
+#include <unistd.h>
 #endif
 
 namespace fs = std::filesystem;
@@ -71,7 +73,11 @@ namespace
 /** lilabatch on a console: long operations as one line on stderr, rewritten in place. */
 void installConsoleProgress()
 {
+#ifdef _WIN32
     if (!_isatty(_fileno(stderr)))
+#else
+    if (!isatty(fileno(stderr)))
+#endif
         return;
     progress::setReporter(
         [](const std::vector<progress::Snapshot>& roots) {

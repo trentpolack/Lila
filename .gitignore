@@ -41,3 +41,6 @@ LastCoverageResults.log
 .impeccable/config.local.json
 .impeccable/critique/
 .github/hooks/impeccable.json
+
+# MacOS ignores.
+.DS_Store

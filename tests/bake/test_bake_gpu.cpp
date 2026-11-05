@@ -58,6 +58,9 @@ const std::vector<std::string>& gpuBackends()
         }
         catch (const std::exception& e)
         {
+            // Port bring-up must not report success by silently skipping every GPU comparison.
+            if (std::getenv("LILA_REQUIRE_GPU"))
+                FAIL("GPU required for this run: " << e.what());
             MESSAGE("no GPU for bake tests: " << e.what());
             return out;
         }

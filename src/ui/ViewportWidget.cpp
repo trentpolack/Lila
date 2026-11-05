@@ -5,6 +5,7 @@
 #include "scene/Turntable.h"
 #include "scene/ViewState.h"
 #include "ui/CameraBookmarks.h"
+#include <QPlatformSurfaceEvent>
 
 namespace lila::ui
 {
@@ -234,14 +235,21 @@ double ViewportWidget::aspect() const
     return double(s.width()) / double(s.height());
 }
 
+void ViewportWidget::syncNativeSurface()
+{
+    if (!render::Renderer::get().running())
+        return;
+    const QSize s = pixelSize();
+    if (!mId)
+        mId = render::Renderer::get().addViewport(uintptr_t(winId()), s.width(), s.height());
+    else
+        render::Renderer::get().resize(mId, s.width(), s.height());
+}
+
 void ViewportWidget::showEvent(QShowEvent* e)
 {
     QWidget::showEvent(e);
-    if (!mId && render::Renderer::get().running())
-    {
-        QSize s = pixelSize();
-        mId = render::Renderer::get().addViewport(uintptr_t(winId()), s.width(), s.height());
-    }
+    syncNativeSurface();
     requestFrame();
 }
 
@@ -265,6 +273,33 @@ void ViewportWidget::paintEvent(QPaintEvent*)
 
 bool ViewportWidget::event(QEvent* e)
 {
+#ifdef __APPLE__
+    // Dock reparenting can replace the NSView. Retire its Vulkan objects before preparing the new view.
+    if (e->type() == QEvent::WinIdChange ||
+        (e->type() == QEvent::PlatformSurface &&
+         static_cast<QPlatformSurfaceEvent*>(e)->surfaceEventType() == QPlatformSurfaceEvent::SurfaceAboutToBeDestroyed))
+    {
+        if (mId)
+        {
+            render::Renderer::get().removeViewport(mId);
+            mId = 0;
+        }
+        if (e->type() == QEvent::WinIdChange && internalWinId())
+            QTimer::singleShot(0, this, [this] {
+                if (isVisible())
+                {
+                    syncNativeSurface();
+                    requestFrame();
+                }
+            });
+    }
+    if (e->type() == QEvent::DevicePixelRatioChange)
+        QTimer::singleShot(0, this, [this] {
+            if (mId)
+                syncNativeSurface();
+            requestFrame();
+        });
+#endif
     // Native child windows don't get a paint after un-minimize on every platform.
     if (e->type() == QEvent::WindowStateChange || e->type() == QEvent::UpdateRequest)
         requestFrame();

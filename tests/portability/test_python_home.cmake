@@ -1,0 +1,27 @@
+include("${LILA_SOURCE}/cmake/LilaPythonHome.cmake")
+if(NOT IS_DIRECTORY "${LILA_PYTHON_HOME}/${LILA_PYTHON_STDLIB_SUBDIR}/encodings")
+    message(FATAL_ERROR "The configured Python home does not contain its encodings package")
+endif()
+# Exercise the selected home with the real interpreter, including isolated stdlib imports.
+execute_process(COMMAND "${CMAKE_COMMAND}" -E env "PYTHONHOME=${LILA_PYTHON_HOME}"
+    "${Python_EXECUTABLE}" -S -c "import encodings, json, sys; assert sys.prefix == sys.base_prefix"
+    RESULT_VARIABLE result ERROR_VARIABLE error)
+if(NOT result EQUAL 0)
+    message(FATAL_ERROR "Python cannot start with its configured home: ${error}")
+endif()
+set(_expected_prefix "${LILA_PYTHON_HOME}")
+set(_venv "${CMAKE_CURRENT_BINARY_DIR}/python-home-test/venv with spaces")
+execute_process(COMMAND "${Python_EXECUTABLE}" -m venv --without-pip "${_venv}"
+    RESULT_VARIABLE result ERROR_VARIABLE error)
+if(NOT result EQUAL 0)
+    message(FATAL_ERROR "Cannot create the prefix regression fixture: ${error}")
+endif()
+if(WIN32)
+    set(Python_EXECUTABLE "${_venv}/Scripts/python.exe")
+else()
+    set(Python_EXECUTABLE "${_venv}/bin/python3")
+endif()
+include("${LILA_SOURCE}/cmake/LilaPythonHome.cmake")
+if(NOT LILA_PYTHON_HOME STREQUAL _expected_prefix)
+    message(FATAL_ERROR "A venv executable must still select its base installation's stdlib")
+endif()

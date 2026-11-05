@@ -34,6 +34,59 @@ Tests: `scripts\t.cmd build RelWithDebInfo -LE slow`. `-L slow` runs the slow su
 2. Open the editor; its log shows `LogLilaLink: Listening on 127.0.0.1:8741`.
 3. In Lila: select meshes, File > Send to Unreal, enter content paths. From then on every save re-exports and reimports the mapped objects.
 
+## Get it running (macOS, experimental)
+
+Apple Silicon developer build: macOS 14+, a current Xcode/Command Line Tools installation, CMake 3.28+, Ninja,
+vcpkg, ARM64 Python 3.14 and a current MoltenVK with Vulkan 1.3 support. Qt 6.11 comes from vcpkg. This is a
+source-tree build; keep the checkout and dependency installations in place. The macOS port still needs hardware
+validation before it can be considered supported.
+
+For Homebrew dependencies and a vcpkg checkout (use your existing `VCPKG_ROOT` if you have one):
+
+```sh
+brew install cmake ninja python@3.14 molten-vk
+export VCPKG_ROOT="$HOME/dev/vcpkg"
+git clone https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
+"$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+
+# From the Lila checkout; configure/build every target, including extensions.
+cmake --preset macos-arm64 \
+  -DPython_EXECUTABLE="$(brew --prefix python@3.14)/bin/python3.14" \
+  -DLILA_MOLTENVK="$(brew --prefix molten-vk)/lib/libMoltenVK.dylib"
+./build.sh                             # dev build (RelWithDebInfo)
+# ./build.sh --release                 # release build; executable in bin/Release instead
+build/macos-arm64/bin/RelWithDebInfo/lila
+```
+
+`build.sh` configures with the `macos-arm64` preset on first run if needed, then builds every target. The explicit
+configure command above selects the Homebrew Python and MoltenVK paths; subsequent builds reuse that configuration.
+
+The preset uses dynamic ARM64 dependencies and initially disables USD, volumes, PySide and Tracy. A Vulkan SDK
+installation can supply MoltenVK instead: set `LILA_MOLTENVK` to its `lib/libMoltenVK.dylib`. The renderer loads that
+configured library directly, so a global Vulkan loader/ICD setup is unnecessary. This direct path does not load
+Vulkan validation layers. Unsupported wide lines render at one pixel; unsupported ray queries use compute traversal.
+
+First-milestone checks:
+
+```sh
+# An edited cube must survive save/reopen, produce a shaded capture, and complete a GPU compute bake.
+# This fails on missing Vulkan or CPU fallback and prints a temporary directory containing the results.
+ctest --preset macos-dev -R '^lila_macos_smoke$'
+
+# Existing numerical GPU-vs-CPU bake comparison; require a GPU instead of silently skipping.
+LILA_REQUIRE_GPU=1 LILA_VK_NO_RT=1 \
+  build/macos-arm64/bin/RelWithDebInfo/lila_bake_gpu_tests --test-case='*bump plane*'
+
+# Remaining default checks, excluding the repository's slow and known-failing suites.
+ctest --preset macos-dev
+```
+
+Also open the smoke test's `edited-cube.lila` in the GUI. Confirm that the shaded cube appears, orbit and edit it,
+save/reopen it, resize the window, move it between Retina/non-Retina displays if available, and undock/redock the
+viewport. Confirm that drawing and selection remain aligned, then inspect `shaded-cube.png` and the baked maps.
+An offscreen capture alone does not validate native window presentation. There is no distributable `.app` bundle,
+macOS video encoder, or macOS crash watchdog in this milestone; use image sequences for video output.
+
 ## Troubleshooting
 
 - **vcpkg fails with `Operation REMOVE_DUPLICATES not recognized`:** the vcpkg that ships with Visual Studio is older than Lila's pinned ports. Update Visual Studio 2022 in the Visual Studio Installer (or point `VCPKG_ROOT` at a fresh clone of github.com/microsoft/vcpkg after running its `bootstrap-vcpkg.bat`), delete the `build` folder and run `build.bat` again.

@@ -4,8 +4,10 @@
 vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 
 # vcpkg may build with a newer MSVC than Lila links with; the newer STL's vectorized helpers would not resolve there.
-set(VCPKG_CXX_FLAGS "${VCPKG_CXX_FLAGS} /D_USE_STD_VECTOR_ALGORITHMS=0")
-set(VCPKG_C_FLAGS "${VCPKG_C_FLAGS} /D_USE_STD_VECTOR_ALGORITHMS=0")
+if(VCPKG_TARGET_IS_WINDOWS AND NOT VCPKG_TARGET_IS_MINGW)
+    set(VCPKG_CXX_FLAGS "${VCPKG_CXX_FLAGS} /D_USE_STD_VECTOR_ALGORITHMS=0")
+    set(VCPKG_C_FLAGS "${VCPKG_C_FLAGS} /D_USE_STD_VECTOR_ALGORITHMS=0")
+endif()
 
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
