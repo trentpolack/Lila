@@ -39,7 +39,7 @@
         "CMAKE_OSX_DEPLOYMENT_TARGET": "14.0",
         "CMAKE_C_COMPILER": "clang",
         "CMAKE_CXX_COMPILER": "clang++",
-        "CMAKE_OBJCXX_COMPILER": "clang++",
+        "CMAKE_OBJCXX_COMPILER": "/usr/bin/clang++",
         "LILA_USD": "OFF",
         "LILA_VOLUMES": "OFF",
         "LILA_PYSIDE": "OFF",
